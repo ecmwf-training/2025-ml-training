@@ -23,9 +23,15 @@ from anemoi.inference.types import State
 from anemoi.inference.profiler import ProfilingLabel
 from anemoi.inference.profiler import ProfilingRunner
 from anemoi.inference.runners.simple import SimpleRunner
+from types import MappingProxyType as frozendict
 
 
 LOG = logging.getLogger(__name__)
+
+
+def _make_indices_mapping(indices_from: list, indices_to: list) -> frozendict:
+    assert len(indices_from) == len(indices_to), (indices_from, indices_to)
+    return frozendict({i: j for i, j in zip(indices_from, indices_to)})
 
 
 class SensitivitiesRunner(SimpleRunner):
@@ -42,6 +48,15 @@ class SensitivitiesRunner(SimpleRunner):
         """
         super().__init__(*args, **kwargs)
         self.perturb_normalised_space = perturb_normalised_space
+
+    @property
+    def input_tensor_index_to_variable(self) -> dict[int, str]:
+        """Return the mapping between input tensor index and variable name."""
+        mapping = _make_indices_mapping(
+            self.checkpoint._metadata._indices.model.input.full,
+            self.checkpoint._metadata._indices.data.input.full,
+        )
+        return frozendict({k: self.checkpoint._metadata.variables[v] for k, v in mapping.items()})
 
     def wrap_model(self, model: torch.nn.Module) -> Callable:
         """Wrap the model to be used for sensitivities."""
@@ -79,7 +94,7 @@ class SensitivitiesRunner(SimpleRunner):
         # The first time the function is called, you may get a checkpointing error.
         try:
             with torch.enable_grad():
-                with torch.autocast(device_type=self.device.type, dtype=self.autocast):
+                with torch.autocast(device_type=self.device, dtype=self.autocast):
                     y_pred, t_dx_output = torch.autograd.functional.vjp(
                         model_func,
                         input_tensor_torch,
@@ -91,7 +106,7 @@ class SensitivitiesRunner(SimpleRunner):
             LOG.warning("Checkpointing error occurred.")
 
         with torch.enable_grad():
-            with torch.autocast(device_type=self.device.type, dtype=self.autocast):
+            with torch.autocast(device_type=self.device, dtype=self.autocast):
                 y_pred, t_dx_output = torch.autograd.functional.vjp(
                     model_func,
                     input_tensor_torch,
@@ -166,7 +181,7 @@ class SensitivitiesRunner(SimpleRunner):
 
             # Predict next state of atmosphere
             with (
-                torch.autocast(device_type=self.device.type, dtype=self.autocast),
+                torch.autocast(device_type=self.device, dtype=self.autocast),
                 ProfilingLabel("Predict step", self.use_profiler),
                 Timer(title),
             ):
@@ -177,7 +192,7 @@ class SensitivitiesRunner(SimpleRunner):
             # Update state
             with ProfilingLabel("Updating state (CPU)", self.use_profiler):
                 for i in range(y_pred.shape[-1]):
-                    new_state["fields"][self.checkpoint.input_tensor_index_to_variable[i]] = y_pred[:, :, i]
+                    new_state["fields"][self.input_tensor_index_to_variable[i]] = y_pred[:, :, i]
 
             if (s == 0 and self.verbosity > 0) or self.verbosity > 1:
                 self._print_input_tensor("Sensitivities tensor", y_pred)

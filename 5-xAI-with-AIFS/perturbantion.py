@@ -10,12 +10,44 @@
 from abc import ABC, abstractmethod
 import logging
 from typing import Any
+from types import MappingProxyType as frozendict
 
 import torch
 
 from anemoi.inference.checkpoint import Checkpoint
 
 LOG = logging.getLogger(__name__)
+
+
+def _make_indices_mapping(indices_from: list, indices_to: list) -> frozendict:
+    assert len(indices_from) == len(indices_to), (indices_from, indices_to)
+    return frozendict({i: j for i, j in zip(indices_from, indices_to)})
+
+
+class ExpandedCheckpoint(Checkpoint):
+    """Expanded Checkpoint with additional properties."""
+
+    @property
+    def number_of_grid_points(self) -> int:
+        return self._metadata.number_of_grid_points
+
+    @property
+    def variable_to_output_tensor_index(self) -> Any:
+        """Get the variable to input tensor index."""
+        mapping = _make_indices_mapping(
+            self._metadata._indices.data.output.full,
+            self._metadata._indices.model.output.full,
+        )
+
+        return frozendict({v: mapping[i] for i, v in enumerate(self._metadata.variables) if i in mapping})
+    @property
+    def input_tensor_index_to_variable(self) -> Any:
+        """Get the output tensor index to variable."""
+        mapping = _make_indices_mapping(
+            self._metadata._indices.model.input.full,
+            self._metadata._indices.data.input.full,
+        )
+        return frozendict({k: self._metadata.variables[v] for k, v in mapping.items()})
 
 
 class Perturbation(ABC):
@@ -33,19 +65,25 @@ class Perturbation(ABC):
         checkpoint : str
             Path to the checkpoint.
         """
-        self._checkpoint = Checkpoint(checkpoint, patch_metadata=patch_metadata)
+        self._checkpoint = ExpandedCheckpoint(checkpoint, patch_metadata=patch_metadata)
 
     @property
     def variable_to_output_tensor_index(self) -> dict[str, int]:
-        return self._checkpoint._metadata.variable_to_output_tensor_index
+        """Return the mapping between variable name and output tensor index."""
+        return self._checkpoint.variable_to_output_tensor_index
+
+    @property
+    def input_tensor_index_to_variable(self) -> dict[str, int]:
+        """Return the mapping between variable name and input tensor index."""
+        return self._checkpoint.input_tensor_index_to_variable
 
     @property
     def output_shape(self) -> tuple[int, ...]:
         return (
             1,
             1,
-            self._checkpoint._metadata.number_of_grid_points,
-            len(self._checkpoint._metadata.variable_to_output_tensor_index),
+            self._checkpoint.number_of_grid_points,
+            len(self.variable_to_output_tensor_index),
         )
 
     @property

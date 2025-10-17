@@ -101,8 +101,6 @@ def load_input_state(date) -> dict:
     return input_state
 
 
-
-
 def haversine(coords: torch.Tensor, point: torch.Tensor) -> torch.Tensor:
     """Compute haversine distance between multiple coordinates and a single point.
 
