@@ -94,7 +94,7 @@ class SensitivitiesRunner(SimpleRunner):
         # The first time the function is called, you may get a checkpointing error.
         try:
             with torch.enable_grad():
-                with torch.autocast(device_type=self.device, dtype=self.autocast):
+                with torch.autocast(device_type=self.device.type, dtype=self.autocast):
                     y_pred, t_dx_output = torch.autograd.functional.vjp(
                         model_func,
                         input_tensor_torch,
@@ -106,7 +106,7 @@ class SensitivitiesRunner(SimpleRunner):
             LOG.warning("Checkpointing error occurred.")
 
         with torch.enable_grad():
-            with torch.autocast(device_type=self.device, dtype=self.autocast):
+            with torch.autocast(device_type=self.device.type, dtype=self.autocast):
                 y_pred, t_dx_output = torch.autograd.functional.vjp(
                     model_func,
                     input_tensor_torch,
@@ -181,7 +181,7 @@ class SensitivitiesRunner(SimpleRunner):
 
             # Predict next state of atmosphere
             with (
-                torch.autocast(device_type=self.device, dtype=self.autocast),
+                torch.autocast(device_type=self.device.type, dtype=self.autocast),
                 ProfilingLabel("Predict step", self.use_profiler),
                 Timer(title),
             ):
