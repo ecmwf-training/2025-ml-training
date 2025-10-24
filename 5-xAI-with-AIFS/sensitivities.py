@@ -10,21 +10,19 @@
 import datetime
 import logging
 from collections.abc import Generator
+from types import MappingProxyType as frozendict
 from typing import Any
 from typing import Callable
 
 import numpy as np
 import torch
-from anemoi.utils.dates import frequency_to_timedelta as to_timedelta
-from anemoi.utils.timer import Timer
-
-from anemoi.inference.types import FloatArray
-from anemoi.inference.types import State
 from anemoi.inference.profiler import ProfilingLabel
 from anemoi.inference.profiler import ProfilingRunner
 from anemoi.inference.runners.simple import SimpleRunner
-from types import MappingProxyType as frozendict
-
+from anemoi.inference.types import FloatArray
+from anemoi.inference.types import State
+from anemoi.utils.dates import frequency_to_timedelta as to_timedelta
+from anemoi.utils.timer import Timer
 
 LOG = logging.getLogger(__name__)
 
@@ -129,6 +127,9 @@ class SensitivitiesRunner(SimpleRunner):
             The input tensor.
         input_state : State
             The input state.
+        perturbation : Perturbation
+            The perturbation
+
         Returns
         -------
         Any
@@ -212,11 +213,15 @@ class SensitivitiesRunner(SimpleRunner):
         ----------
         input_state : State
             The input state.
+        perturbation : Perturbation
+            The output perturbation
         lead_time : Union[str, int, datetime.timedelta]
             The lead time.
         return_numpy : bool, optional
             Whether to return the output state fields as numpy arrays, by default True.
             Otherwise, it will return torch tensors.
+
+
         Returns
         -------
         Generator[State, None, None]

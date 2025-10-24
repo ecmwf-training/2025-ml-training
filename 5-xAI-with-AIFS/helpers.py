@@ -1,13 +1,13 @@
-import logging
 import datetime
-import torch 
-import numpy as np
+import logging
 from collections import defaultdict
 from pathlib import Path
 
 import earthkit.data as ekd
 import earthkit.regrid as ekr
 import numpy as np
+import pandas as pd
+import torch
 from ecmwf.opendata import Client as OpendataClient
 
 LOGGER = logging.getLogger(__name__)
@@ -123,3 +123,37 @@ def haversine(coords: torch.Tensor, point: torch.Tensor) -> torch.Tensor:
     c = 2 * torch.atan2(torch.sqrt(a), torch.sqrt(1 - a))
 
     return R * c
+
+
+def compute_sensitivities_statistics(sensitivities) -> pd.DataFrame:
+    df = pd.DataFrame()
+    for i, (varname, array) in enumerate(sensitivities["fields"].items()):
+        var_type = "pl" if "_" in varname and varname.split("_")[1].isdigit() else "sfc"
+        pl = varname.split("_")[-1] if var_type == "pl" else None
+        name = varname.split("_")[0] if var_type == "pl" else varname
+        df[2 * i] = (
+            varname,
+            var_type,
+            name,
+            pl,
+            -6,
+            np.sum(array[0] != 0) / array[0].size * 100,
+            np.min(array[0]),
+            np.max(array[0]),
+        )
+        df[2 * i + 1] = (
+            varname,
+            var_type,
+            name,
+            pl,
+            0,
+            np.sum(array[1] != 0) / array[1].size * 100,
+            np.min(array[1]),
+            np.max(array[1]),
+        )
+    df = df.T
+    df.columns = ["var", "type", "varname", "pl", "hour", "num_nonzero", "min", "max"]
+    df = df.astype({"num_nonzero": "float32", "min": "float32", "max": "float32"})
+    df = df.set_index(["var", "type", "varname", "pl", "hour"])
+    df = df.round({"num_nonzero": 2}).reset_index()
+    return df
