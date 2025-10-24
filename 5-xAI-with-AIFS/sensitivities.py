@@ -221,7 +221,6 @@ class SensitivitiesRunner(SimpleRunner):
             Whether to return the output state fields as numpy arrays, by default True.
             Otherwise, it will return torch tensors.
 
-
         Returns
         -------
         Generator[State, None, None]
