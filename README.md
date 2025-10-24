@@ -16,36 +16,36 @@ The repo is organised according to the practical sessions of the course (see [ti
 
 ### 2. Debugging ML Models
 
-- **Overview:** 
-- **Key topics:** 
-- **Tools and technologies:** 
+- **Overview:**
+- **Key topics:**
+- **Tools and technologies:**
 
 ### 3. Graph Neural Networks
 
-- **Overview:** 
-- **Key topics:** 
-- **Tools and technologies:** 
+- **Overview:**
+- **Key topics:**
+- **Tools and technologies:**
 
 ### 4. Run the AIFS
 
-- **Overview:** 
-- **Key topics:** 
-- **Tools and technologies:** 
+- **Overview:**
+- **Key topics:**
+- **Tools and technologies:**
 
 ### 5. Explainable AI with AIFS
 
-- **Overview:** 
+- **Overview:**
 - **Key topics:**
 - **Tools and technologies:**
 
 ### 6. Anemoi
 
-- **Overview:** 
-- **Key topics:** 
-- **Tools and technologies:** 
+- **Overview:**
+- **Key topics:**
+- **Tools and technologies:**
 
 ### 7. Anemoi Profiling
 
-- **Overview:** 
-- **Key topics:** 
-- **Tools and technologies:** 
+- **Overview:**
+- **Key topics:**
+- **Tools and technologies:**

@@ -1,16 +1,17 @@
-import torch
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from anemoi.graphs.edges import KNNEdges
+from anemoi.graphs.edges.attributes import GaussianDistanceWeights
 from torch import nn
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from torch_geometric.data import HeteroData
-from anemoi.graphs.edges import KNNEdges
-from anemoi.graphs.edges.attributes import GaussianDistanceWeights
 
 
 class DummyDataset(Dataset):
     """Dummy dataset for downscaling task of random 2D sine wave fields."""
+
     def __init__(self, num_samples: int, graph: HeteroData):
         self.num_samples = num_samples
         self.graph = graph
@@ -21,31 +22,28 @@ class DummyDataset(Dataset):
         return 1
 
     def build_interp_matrix(self, graph: HeteroData):
-        edge_builder = KNNEdges(num_nearest_neighbours=3, source_name='target', target_name='input')
+        edge_builder = KNNEdges(num_nearest_neighbours=3, source_name="target", target_name="input")
         graph = edge_builder.update_graph(graph)
-        weights = GaussianDistanceWeights(norm="l1")(x=(graph["target"], graph["input"]), edge_index=graph["target", "to", "input"].edge_index)
+        weights = GaussianDistanceWeights(norm="l1")(
+            x=(graph["target"], graph["input"]), edge_index=graph["target", "to", "input"].edge_index
+        )
 
         interp_matrix = torch.sparse_coo_tensor(
-            graph['target', 'to', 'input'].edge_index,
+            graph["target", "to", "input"].edge_index,
             weights.squeeze(),
-            (graph['target'].num_nodes, graph['input'].num_nodes),
-            device=graph['target', 'to', 'input'].edge_index.device,
+            (graph["target"].num_nodes, graph["input"].num_nodes),
+            device=graph["target", "to", "input"].edge_index.device,
         )
         return interp_matrix.coalesce().T
 
     def _create_random_2d_sine_wave_field(self):
-        sine_wave = (
-            np.sin(
-                10 * np.random.rand() * self.graph["target"].x[:, 0]
-            ) * 
-            np.cos(
-                10 * np.random.rand() * self.graph["target"].x[:, 1]
-            )
+        sine_wave = np.sin(10 * np.random.rand() * self.graph["target"].x[:, 0]) * np.cos(
+            10 * np.random.rand() * self.graph["target"].x[:, 1]
         )
         return sine_wave.to(torch.float32).unsqueeze(-1)
-    
+
     def _interpolate_to_coarse(self, fine_field):
-        return torch.sparse.mm(self.proj_matrix, fine_field)
+        return torch.sparse.mm(self.proj_matrix.to(fine_field.device), fine_field)
 
     def __len__(self):
         return self.num_samples
@@ -58,6 +56,7 @@ class DummyDataset(Dataset):
 
 class DownscalingModel(nn.Module):
     """A model wrapper around GNNs"""
+
     def __init__(self, gnn, graph):
         super().__init__()
         self.gnn = gnn
@@ -65,12 +64,12 @@ class DownscalingModel(nn.Module):
 
     @property
     def src_coords(self):
-        return self.graph['input'].x
-    
+        return self.graph["input"].x
+
     @property
     def dst_coords(self):
-        return self.graph['target'].x
-    
+        return self.graph["target"].x
+
     def forward(self, x_src):
         # We suppose batch size = 1 for simplicity
         # x_src: [num_coarse_nodes, in_channels_src]
@@ -78,18 +77,18 @@ class DownscalingModel(nn.Module):
         assert x_src.shape[0] == 1, "Batch size greater than 1 not supported in this example."
         out = self.gnn(
             x_src=x_src[0, ...].to(torch.float32),
-            x_dst=self.graph['target'].x.to(torch.float32),
-            edge_index=self.graph['input', 'to', 'target'].edge_index.to(torch.int64),
+            x_dst=self.graph["target"].x.to(torch.float32),
+            edge_index=self.graph["input", "to", "target"].edge_index.to(torch.int64),
             edge_attr=None,
         )
         return out
 
 
-def train(gnn: nn.Module, dataset: Dataset, epochs: int, steps_per_epoch: int) -> list[float]:
+def train(gnn: nn.Module, dataset: Dataset, epochs: int, steps_per_epoch: int, lr: float = 1e-3) -> list[float]:
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
     model = DownscalingModel(gnn=gnn, graph=dataset.graph)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = nn.MSELoss()
 
     train_losses = []
@@ -114,7 +113,7 @@ def train(gnn: nn.Module, dataset: Dataset, epochs: int, steps_per_epoch: int) -
 # Plotting utility functions
 def plot_loss_curve(train_losses):
     plt.figure(figsize=(8, 4))
-    plt.plot(train_losses, marker='o')
+    plt.plot(train_losses, marker="o")
     plt.xlabel("Epoch")
     plt.ylabel("Train Loss")
     plt.title("Training Loss Curve")
@@ -130,7 +129,7 @@ def plot_sample(model, sample):
 
     # Input
     plt.subplot(2, 2, 1)
-    plt.scatter(model.src_coords[:, 1], model.src_coords[:, 0], c=x_coarse.numpy().squeeze(), cmap='viridis')
+    plt.scatter(model.src_coords[:, 1], model.src_coords[:, 0], c=x_coarse.numpy().squeeze(), cmap="viridis")
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
     plt.title("Input (Coarse)")
@@ -138,7 +137,7 @@ def plot_sample(model, sample):
 
     # Target
     plt.subplot(2, 2, 2)
-    plt.scatter(model.dst_coords[:, 1], model.dst_coords[:, 0], c=x_fine.numpy().squeeze(), cmap='viridis')
+    plt.scatter(model.dst_coords[:, 1], model.dst_coords[:, 0], c=x_fine.numpy().squeeze(), cmap="viridis")
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
     plt.title("Target (Fine)")
@@ -146,7 +145,7 @@ def plot_sample(model, sample):
 
     # Prediction
     plt.subplot(2, 2, 3)
-    plt.scatter(model.dst_coords[:, 1], model.dst_coords[:, 0], c=y_pred.numpy().squeeze(), cmap='viridis')
+    plt.scatter(model.dst_coords[:, 1], model.dst_coords[:, 0], c=y_pred.numpy().squeeze(), cmap="viridis")
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
     plt.title("Prediction")
@@ -154,7 +153,7 @@ def plot_sample(model, sample):
 
     # Error
     plt.subplot(2, 2, 4)
-    plt.scatter(model.dst_coords[:, 1], model.dst_coords[:, 0], c=(y_pred - x_fine).numpy().squeeze(), cmap='coolwarm')
+    plt.scatter(model.dst_coords[:, 1], model.dst_coords[:, 0], c=(y_pred - x_fine).numpy().squeeze(), cmap="coolwarm")
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
     plt.title("Error (Prediction - Target)")
