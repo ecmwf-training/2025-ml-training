@@ -214,3 +214,6 @@ def plot_summary_sfc(stats_df, stats: list[str], cmaps: dict[str, str] = None, s
         plt.xticks(rotation=45)
     
     plt.tight_layout()
+    if savefig:
+        fig.savefig(f"sensitivities_sfc_summary.png")
+        plt.close(fig)
