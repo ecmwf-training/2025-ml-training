@@ -7,13 +7,13 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-from abc import ABC, abstractmethod
 import logging
-from typing import Any
+from abc import ABC
+from abc import abstractmethod
 from types import MappingProxyType as frozendict
+from typing import Any
 
 import torch
-
 from anemoi.inference.checkpoint import Checkpoint
 
 LOG = logging.getLogger(__name__)
@@ -40,6 +40,7 @@ class ExpandedCheckpoint(Checkpoint):
         )
 
         return frozendict({v: mapping[i] for i, v in enumerate(self._metadata.variables) if i in mapping})
+
     @property
     def input_tensor_index_to_variable(self) -> Any:
         """Get the output tensor index to variable."""
@@ -52,6 +53,7 @@ class ExpandedCheckpoint(Checkpoint):
 
 class Perturbation(ABC):
     """Base Perturbation"""
+
     def __init__(
         self,
         checkpoint: str,
