@@ -1,4 +1,4 @@
-configs/outputs
+**/outputs
 # Python
 __pycache__/
 *.py[cod]
