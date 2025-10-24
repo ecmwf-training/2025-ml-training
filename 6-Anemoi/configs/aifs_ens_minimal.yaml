@@ -30,15 +30,15 @@ data:
 # Dataloader configuration
 dataloader:
   dataset: 
-    dataset: ${hardware.files.dataset}
-    select:  ['z_1000', 'z_500', 'z_700', 'z_300', '2t', 't_850', 'tcw', 'z_250', 'lsm', 'z', 'cp', 'tp', "cos_latitude", "cos_longitude", "sin_latitude", "sin_longitude", "cos_julian_day", "cos_local_time", "sin_julian_day", "sin_local_time", "insolation", "lsm", "sdor", "slor", "z"]
+    dataset: ${hardware.paths.data}/${hardware.files.dataset}
+    select:  ['z_1000', 'z_500', 'z_700', 'z_300', '2t', 't_850', 'tcw', 'z_250', 'lsm', 'z', 'cp', 'tp', 'cos_latitude', 'cos_longitude', 'sin_latitude', 'sin_longitude', 'cos_julian_day', 'cos_local_time', 'sin_julian_day', 'sin_local_time', 'insolation', 'lsm', 'sdor', 'slor', 'z']
 
   batch_size:
     training: 2
     validation: 2
   limit_batches:
-    training: 8
-    validation: 8
+    training: null
+    validation: 256
 
 # Datamodule configuration for ensemble training
 datamodule:
@@ -46,7 +46,7 @@ datamodule:
 
 # Model configuration for ensemble training
 model:
-  num_channels: 128  # Reduced for debug run
+  num_channels: 128 
 
   model:
     _target_: anemoi.models.models.AnemoiEnsModelEncProcDec
@@ -121,14 +121,13 @@ training:
     read_group_size: ${dataloader.read_group_size}
 
   # Training parameters
-  max_steps: 16  # Short run for demo
+  max_steps: 50000  # Short run for demo
   max_epochs: null
   lr:
+    rate: 1e-3  # effective_lr=1e-3, effective_bs=16
     warmup: 1000
-    rate: 0.625e-4  # effective_lr=1e-3, effective_bs=16
     iterations: ${training.max_steps}
     min: 3e-7
-
 
 # Diagnostics configuration
 diagnostics:

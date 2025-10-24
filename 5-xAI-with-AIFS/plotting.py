@@ -1,6 +1,6 @@
-import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -8,7 +8,7 @@ def plot_sensitivities(
     state: dict, field: str, savefig: bool = False, area: tuple[float, float, float, float] = None
 ) -> None:
     num_times = state["fields"][field].shape[0]
-    fig, axs = plt.subplots(1, num_times, figsize=(16, 12 * num_times), subplot_kw={'projection': ccrs.PlateCarree()})
+    fig, axs = plt.subplots(1, num_times, figsize=(16, 12 * num_times), subplot_kw={"projection": ccrs.PlateCarree()})
     if not isinstance(axs, (list, np.ndarray)):
         axs = [axs]
 
@@ -20,7 +20,7 @@ def plot_sensitivities(
         ax = axs[i]
         ax.set_title(f"{field} (at -{(num_times-i-1)*6}H)")
         ax.add_feature(cfeature.COASTLINE, alpha=0.8, color="grey")
-        ax.add_feature(cfeature.BORDERS, linestyle=':', alpha=0.4, color="grey")
+        ax.add_feature(cfeature.BORDERS, linestyle=":", alpha=0.4, color="grey")
         if area is not None:
             # area should be (lon_min, lon_max, lat_min, lat_max)
             ax.set_extent(area, crs=ccrs.PlateCarree())
@@ -33,15 +33,15 @@ def plot_sensitivities(
             cmap="PuOr",
             vmin=-lim,
             vmax=lim,
-            transform=ccrs.PlateCarree()
+            transform=ccrs.PlateCarree(),
         )
         scatter_plots.append(scatter)
-    
+
     # Use the first scatter plot for the colorbar to ensure colormap consistency
     cbar = fig.colorbar(
         scatter_plots[0],
         ax=axs,
-        orientation='horizontal',
+        orientation="horizontal",
         fraction=0.05,
         shrink=0.7,
         pad=0.05,
@@ -87,7 +87,7 @@ def plot_summary_pl(stats_df, stats: list[str], cmaps: dict[str, str] = None, sa
                 .sort_index()
                 .unstack()
             )
-    
+
             # Plot heatmap
             pcm = axs[i, j].pcolormesh(
                 heatmap_data.values,
@@ -182,7 +182,7 @@ def plot_summary_sfc(stats_df, stats: list[str], cmaps: dict[str, str] = None, s
         axs[j].set_yticklabels(heatmap_data.index)
         axs[j].grid(False)
         axs[j].set_frame_on(True)
-    
+
         # Axis labels only on edges
         if j == len(stats) - 1:
             axs[j].set_xlabel("Pressure Level")
@@ -191,7 +191,6 @@ def plot_summary_sfc(stats_df, stats: list[str], cmaps: dict[str, str] = None, s
         if j == 0:
             axs[j].set_title(f"Sensitivities of SFC variables")
     
-    # --- Shared colorbars (one per column, below each column) ---
     for j, stat in enumerate(stats):
         # Determine color scale across all rows for this stat
         vmin = min(pcm.get_array().min() for pcm in pcms[stat])
