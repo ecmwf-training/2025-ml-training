@@ -58,4 +58,159 @@ def plot_sensitivities(
     if savefig:
         fig.savefig(f"sensitivities_{field}.png")
         plt.close(fig)
-        
+
+
+def plot_summary_pl(stats_df, stats: list[str], cmaps: dict[str, str] = None, savefig: bool = False):
+    if cmaps is None or isinstance(cmaps, str):
+        cmaps = {s: "viridis" if cmaps is None else cmaps for s in stats}
+    
+    hours = list(stats_df["hour"].unique())
+    
+    fig, axs = plt.subplots(
+        len(hours),
+        len(stats),
+        figsize=(8 * len(stats), 5 * len(hours)),
+        sharex=True,
+        sharey=True
+    )
+    
+    # Track pcolormesh handles for each stat to normalize color scales
+    pcms = {stat: [] for stat in stats}
+    
+    for i, hour in enumerate(hours):
+        for j, stat in enumerate(stats):
+            # Filter and pivot your DataFrame
+            heatmap_data = (
+                stats_df[(stats_df.type == "pl") & (stats_df.hour == hour)]
+                .astype({"pl": int})
+                .set_index(["varname", "pl"])[stat]
+                .sort_index()
+                .unstack()
+            )
+    
+            # Plot heatmap
+            pcm = axs[i, j].pcolormesh(
+                heatmap_data.values,
+                cmap=cmaps[stat],
+                shading="auto",
+                edgecolors='none',
+            )
+            pcms[stat].append(pcm)
+    
+            # Axis ticks and labels
+            axs[i, j].set_xticks(np.arange(len(heatmap_data.columns)) + 0.5)
+            axs[i, j].set_yticks(np.arange(len(heatmap_data.index)) + 0.5)
+            axs[i, j].set_xticklabels(heatmap_data.columns)
+            axs[i, j].set_yticklabels(heatmap_data.index)
+            axs[i, j].grid(False)
+            axs[i, j].set_frame_on(True)
+    
+            # Axis labels only on edges
+            if i == len(hours) - 1:
+                axs[i, j].set_xlabel("Pressure Level")
+            if j == 0:
+                axs[i, j].set_ylabel("Variable (only pl)")
+    
+            axs[i, j].set_title(f"{stat.upper()} values at {hour}h")
+    
+    # --- Shared colorbars (one per column, below each column) ---
+    for j, stat in enumerate(stats):
+        # Determine color scale across all rows for this stat
+        vmin = min(pcm.get_array().min() for pcm in pcms[stat])
+        vmax = max(pcm.get_array().max() for pcm in pcms[stat])
+        for pcm in pcms[stat]:
+            pcm.set_clim(vmin, vmax)
+    
+        # Add horizontal colorbar below each column
+        cbar = fig.colorbar(
+            pcms[stat][0],
+            ax=axs[:, j],          # all rows in column j
+            orientation="horizontal",
+            fraction=0.05, pad=0.15
+        )
+        cbar.set_label(f"{stat.upper()} value")
+    
+    # Rotate x-tick labels
+    for ax in axs.flat:
+        plt.sca(ax)
+        plt.xticks(rotation=45)
+
+    if savefig:
+        fig.savefig(f"sensitivities_pl_summary.png")
+        plt.close(fig)
+
+
+def plot_summary_sfc(stats_df, stats: list[str], cmaps: dict[str, str] = None, savefig: bool = False):
+    if cmaps is None or isinstance(cmaps, str):
+        cmaps = {s: "viridis" if cmaps is None else cmaps for s in stats}
+
+    hours = list(stats_df["hour"].unique())
+
+    fig, axs = plt.subplots(
+        len(stats),
+        1,
+        figsize=(12, 2.5  * len(stats)),
+        sharex=True,
+        sharey=True
+    )
+    
+    # Track pcolormesh handles for each stat to normalize color scales
+    pcms = {stat: [] for stat in stats}
+    
+    for j, stat in enumerate(stats):
+        # Filter and pivot your DataFrame
+        heatmap_data = (
+            stats_df[(stats_df.type == "sfc")]
+            .set_index(["varname", "hour"])[stat]
+            .unstack()
+            .T
+        )
+    
+        # Plot heatmap
+        pcm = axs[j].pcolormesh(
+            heatmap_data.values,
+            cmap=cmaps[stat],
+            shading="auto",
+            edgecolors='none',
+        )
+        pcms[stat].append(pcm)
+    
+        # Axis ticks and labels
+        axs[j].set_xticks(np.arange(len(heatmap_data.columns)) + 0.5)
+        axs[j].set_yticks(np.arange(len(heatmap_data.index)) + 0.5)
+        axs[j].set_xticklabels(heatmap_data.columns)
+        axs[j].set_yticklabels(heatmap_data.index)
+        axs[j].grid(False)
+        axs[j].set_frame_on(True)
+    
+        # Axis labels only on edges
+        if j == len(stats) - 1:
+            axs[j].set_xlabel("Pressure Level")
+        axs[j].set_ylabel("Input hour")
+    
+        if j == 0:
+            axs[j].set_title(f"Sensitivities of SFC variables")
+    
+    # --- Shared colorbars (one per column, below each column) ---
+    for j, stat in enumerate(stats):
+        # Determine color scale across all rows for this stat
+        vmin = min(pcm.get_array().min() for pcm in pcms[stat])
+        vmax = max(pcm.get_array().max() for pcm in pcms[stat])
+        for pcm in pcms[stat]:
+            pcm.set_clim(vmin, vmax)
+    
+        # Add horizontal colorbar below each column
+        cbar = fig.colorbar(
+            pcms[stat][0],
+            ax=axs[j],          # all rows in column j
+            orientation="vertical",
+            fraction=0.05, pad=0.15
+        )
+        cbar.set_label(f"{stat.upper()} value")
+    
+    # Rotate x-tick labels
+    for ax in axs:
+        plt.sca(ax)
+        plt.xticks(rotation=45)
+    
+    plt.tight_layout()
