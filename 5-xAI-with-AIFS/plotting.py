@@ -2,11 +2,15 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import matplotlib.pyplot as plt
 import numpy as np
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 
 def plot_sensitivities(
     state: dict, field: str, savefig: bool = False, area: tuple[float, float, float, float] = None
 ) -> None:
+    """Plot sensitivities on a map for a given field."""
     num_times = state["fields"][field].shape[0]
     fig, axs = plt.subplots(1, num_times, figsize=(16, 12 * num_times), subplot_kw={"projection": ccrs.PlateCarree()})
     if not isinstance(axs, (list, np.ndarray)):
@@ -60,7 +64,8 @@ def plot_sensitivities(
         plt.close(fig)
 
 
-def plot_summary_pl(stats_df, stats: list[str], cmaps: dict[str, str] = None, savefig: bool = False):
+def plot_summary_pl(stats_df, stats: list[str], cmaps: dict[str, str] = None, savefig: bool = False) -> None:
+    """Plot summary statistics for pressure levels."""
     if cmaps is None or isinstance(cmaps, str):
         cmaps = {s: "viridis" if cmaps is None else cmaps for s in stats}
     
@@ -140,7 +145,8 @@ def plot_summary_pl(stats_df, stats: list[str], cmaps: dict[str, str] = None, sa
         plt.close(fig)
 
 
-def plot_summary_sfc(stats_df, stats: list[str], cmaps: dict[str, str] = None, savefig: bool = False):
+def plot_summary_sfc(stats_df, stats: list[str], cmaps: dict[str, str] = None, savefig: bool = False) -> None:
+    """Plot summary statistics for surface variables."""
     if cmaps is None or isinstance(cmaps, str):
         cmaps = {s: "viridis" if cmaps is None else cmaps for s in stats}
 
@@ -215,4 +221,81 @@ def plot_summary_sfc(stats_df, stats: list[str], cmaps: dict[str, str] = None, s
     plt.tight_layout()
     if savefig:
         fig.savefig(f"sensitivities_sfc_summary.png")
+        plt.close(fig)
+
+
+def plot_cross_section(
+    variable: str,
+    state: dict,
+    latitude: float | None= None,
+    longitude: float | None = None,
+    margin: float = 0.2,
+    xlim: tuple[float, float] | None = None,
+    savefig: bool = False,
+) -> None:
+    """Plot latitude cross-section subplots for a given variable."""
+    assert (latitude is not None) != (longitude is not None), "Specify either latitude or longitude."
+    latitudes = state["latitudes"]
+    longitudes = state["longitudes"]
+    data = state["fields"]
+    if longitude is not None:
+        ref_value = longitude
+        ref_coords = longitudes
+        xvalues = latitudes
+        xlabel = "Latitude"
+    else:
+        ref_value = latitude
+        ref_coords = latitudes
+        xvalues = longitudes
+        xlabel = "Longitude"
+
+    mask = (ref_coords >= ref_value - margin) & (ref_coords <= ref_value + margin)
+    if mask.sum() == 0:
+        raise ValueError(
+            f"No data points found in the {xlabel.lower()} interval ({ref_value - margin}, {ref_value + margin})."
+        )
+
+    # Get pressure levels
+    pls = list(reversed(sorted(int(k.split("_")[1]) for k in data.keys() if k.startswith(f"{variable}_"))))
+    print(
+        f"Plotting cross-section sensitivities at {xlabel.lower()}={ref_value}° with {mask.sum()} points at {len(pls)} pressure levels."
+    )
+
+    # Collect Ys for each pressure level and each data slice (e.g., data[0], data[1])
+    sensitivities = np.array([data[f"{variable}_{pl}"][:, mask] for pl in pls]).transpose(1, 0, 2)
+    # shape: [input_steps, num_pls, num_gridpoints]
+
+    # Prepare cmap limits
+    vmax = np.abs(sensitivities).max()
+
+    # Create meshgrid for plotting
+    Xs, Ys = np.meshgrid(xvalues[mask], pls)
+
+    if xlim is None:
+        xlim = xvalues[mask].min(), xvalues[mask].max()
+
+    # Compute x-axis bounds
+    fig, axs = plt.subplots(1, sensitivities.shape[0], figsize=(8 * sensitivities.shape[0], 5), sharey=True)
+
+    for i, ax in enumerate(axs):
+        pcm = ax.imshow(
+            sensitivities[i],
+            extent=[Xs.min(), Xs.max(), Ys.min(), Ys.max()],
+            origin='lower',
+            vmin=-vmax,
+            vmax=vmax,
+            cmap="RdBu",
+            aspect='auto'
+        )
+        ax.set_xlim(xlim)
+        ax.set_title(f"{variable}[-{(len(axs)-i-1)*6}H] sensitivity at {xlabel[:3].lower()}={ref_value}°")
+        ax.set_xlabel(f"{xlabel} (°)")
+        ax.set_ylabel("Pressure Level (hPa)")
+
+    ax.invert_yaxis()
+    fig.colorbar(pcm, ax=ax, label=f"{variable}")
+
+    plt.tight_layout()
+    if savefig:
+        fig.savefig(f"sensitivities_{variable}_{xlabel[:3].lower()}{ref_value}.png")
         plt.close(fig)
