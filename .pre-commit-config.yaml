@@ -1,0 +1,22 @@
+repos:
+# Empty notebooks
+- repo: local
+  hooks:
+  - id: clear-notebooks-output
+    name: clear-notebooks-output
+    files: scripts/.*\.ipynb$
+    stages: [pre-commit]
+    language: python
+    entry: jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
+    additional_dependencies: [jupyter]
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+  - id: check-yaml # Check YAML files for syntax errors only
+    args: [--unsafe, --allow-multiple-documents]
+  - id: debug-statements # Check for debugger imports and py37+ breakpoint()
+  - id: end-of-file-fixer # Ensure files end in a newline
+  - id: trailing-whitespace # Trailing whitespace checker
+  - id: check-added-large-files # Check for large files added to git
+  - id: check-merge-conflict # Check for files that contain merge conflict
+

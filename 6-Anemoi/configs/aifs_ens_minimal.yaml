@@ -37,8 +37,8 @@ dataloader:
     training: 2
     validation: 2
   limit_batches:
-    training: null
-    validation: 256
+    training: 4
+    validation: 4
 
 # Datamodule configuration for ensemble training
 datamodule:
@@ -96,7 +96,7 @@ model:
 training:
   # select model task
   model_task: anemoi.training.train.tasks.GraphEnsForecaster
-  ensemble_size_per_device: 4
+  ensemble_size_per_device: 2
 
   # Fair CRPS loss function for the model
   training_loss:
@@ -121,7 +121,7 @@ training:
     read_group_size: ${dataloader.read_group_size}
 
   # Training parameters
-  max_steps: 50000  # Short run for demo
+  max_steps: 16  # Short run for demo
   max_epochs: null
   lr:
     rate: 1e-3  # effective_lr=1e-3, effective_bs=16
@@ -138,4 +138,8 @@ diagnostics:
     callbacks: []
   log:
     mlflow:
-      system: True
+      enabled: True
+      offline: True
+      tracking_uri: ${hardware.paths.output}/logs
+      experiment_name: 'ml-taining-course'
+      run_name: 'aifs-ens-training' 
