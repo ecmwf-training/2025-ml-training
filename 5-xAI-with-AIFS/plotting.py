@@ -2,6 +2,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import logging
 
 LOGGER = logging.getLogger(__name__)
@@ -64,17 +65,24 @@ def plot_sensitivities(
         plt.close(fig)
 
 
-def plot_summary_pl(stats_df, stats: list[str], cmaps: dict[str, str] = None, savefig: bool = False) -> None:
+def plot_summary_pl(
+    stats_df: pd.DataFrame, 
+    stats: list[str],
+    variables: list[str] | None = None,
+    cmaps: dict[str, str] | None = None,
+    savefig: bool = False
+) -> None:
     """Plot summary statistics for pressure levels."""
     if cmaps is None or isinstance(cmaps, str):
         cmaps = {s: "viridis" if cmaps is None else cmaps for s in stats}
     
     hours = list(stats_df["hour"].unique())
+    variables = list(stats_df[stats_df.type == "pl"]["varname"].unique()) if variables is None else variables
     
     fig, axs = plt.subplots(
         len(hours),
         len(stats),
-        figsize=(8 * len(stats), 5 * len(hours)),
+        figsize=(5 * len(stats), 8 * len(hours)),
         sharex=True,
         sharey=True
     )
@@ -86,11 +94,11 @@ def plot_summary_pl(stats_df, stats: list[str], cmaps: dict[str, str] = None, sa
         for j, stat in enumerate(stats):
             # Filter and pivot your DataFrame
             heatmap_data = (
-                stats_df[(stats_df.type == "pl") & (stats_df.hour == hour)]
+                stats_df[(stats_df.type == "pl") & (stats_df.hour == hour) & (stats_df.varname.isin(variables))]
                 .astype({"pl": int})
                 .set_index(["varname", "pl"])[stat]
-                .sort_index()
-                .unstack()
+                .unstack().T
+                .sort_index(ascending=False)
             )
 
             # Plot heatmap
@@ -112,9 +120,9 @@ def plot_summary_pl(stats_df, stats: list[str], cmaps: dict[str, str] = None, sa
     
             # Axis labels only on edges
             if i == len(hours) - 1:
-                axs[i, j].set_xlabel("Pressure Level")
+                axs[i, j].set_xlabel("Variable (only pl)")
             if j == 0:
-                axs[i, j].set_ylabel("Variable (only pl)")
+                axs[i, j].set_ylabel("Pressure Level")
     
             axs[i, j].set_title(f"{stat.upper()} values at {hour}h")
     
@@ -138,14 +146,18 @@ def plot_summary_pl(stats_df, stats: list[str], cmaps: dict[str, str] = None, sa
     # Rotate x-tick labels
     for ax in axs.flat:
         plt.sca(ax)
-        plt.xticks(rotation=45)
 
     if savefig:
         fig.savefig(f"sensitivities_pl_summary.png")
         plt.close(fig)
 
 
-def plot_summary_sfc(stats_df, stats: list[str], cmaps: dict[str, str] = None, savefig: bool = False) -> None:
+def plot_summary_sfc(
+    stats_df: pd.DataFrame,
+    stats: list[str],
+    cmaps: dict[str, str] | None = None,
+    savefig: bool = False
+) -> None:
     """Plot summary statistics for surface variables."""
     if cmaps is None or isinstance(cmaps, str):
         cmaps = {s: "viridis" if cmaps is None else cmaps for s in stats}
@@ -281,7 +293,6 @@ def plot_cross_section(
         pcm = ax.imshow(
             sensitivities[i],
             extent=[Xs.min(), Xs.max(), Ys.min(), Ys.max()],
-            origin='lower',
             vmin=-vmax,
             vmax=vmax,
             cmap="RdBu",
@@ -290,7 +301,8 @@ def plot_cross_section(
         ax.set_xlim(xlim)
         ax.set_title(f"{variable}[-{(len(axs)-i-1)*6}H] sensitivity at {xlabel[:3].lower()}={ref_value}°")
         ax.set_xlabel(f"{xlabel} (°)")
-        ax.set_ylabel("Pressure Level (hPa)")
+        if i == 0:
+            ax.set_ylabel("Pressure Level (hPa)")
 
     ax.invert_yaxis()
     fig.colorbar(pcm, ax=ax, label=f"{variable}")
