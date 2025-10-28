@@ -35,7 +35,7 @@ def _make_indices_mapping(indices_from: list, indices_to: list) -> frozendict:
 class SensitivitiesRunner(SimpleRunner):
     """Sensitivities runner."""
 
-    def __init__(self, *args: Any, perturb_normalised_space: bool = False, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, return_unnormalised_sensitivities: bool = True, perturb_normalised_space: bool = False, **kwargs: Any) -> None:
         """Initialize the SimpleRunner.
         Parameters
         ----------
@@ -45,6 +45,7 @@ class SensitivitiesRunner(SimpleRunner):
             Keyword arguments.
         """
         super().__init__(*args, **kwargs)
+        self.return_unnormalised_sensitivities = return_unnormalised_sensitivities
         self.perturb_normalised_space = perturb_normalised_space
 
     @property
@@ -61,7 +62,8 @@ class SensitivitiesRunner(SimpleRunner):
 
         def model_wrapper(x: torch.Tensor) -> torch.Tensor:
             x = x[:, :, None, ...]  # add dummy ensemble dimension as 3rd index
-            x = model.pre_processors(x, in_place=False)
+            if self.return_unnormalised_sensitivities:
+                x = model.pre_processors(x, in_place=False)
             y_hat = model.model(x)
             if not self.perturb_normalised_space:
                 y_hat = model.post_processors(y_hat, in_place=False)
@@ -85,7 +87,10 @@ class SensitivitiesRunner(SimpleRunner):
         """Predict sensitivities."""
         model_func = self.wrap_model(model)
 
-        # Compute the sensitivities
+        # Prepare input tensor
+        if not self.return_unnormalised_sensitivities:
+            input_tensor_torch = model.pre_processors(input_tensor_torch, in_place=False)
+
         input_tensor_torch.requires_grad_(True)
 
         # This is needed to avoid issues with activation checkpointing.
