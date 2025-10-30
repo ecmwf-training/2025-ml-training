@@ -1,14 +1,31 @@
+# Anemoi-Training
 
-# In this README contains the instructions for running deterministic training of a data-driven weather forecasting model.
+This README contains the instructions for running deterministic training of a data-driven weather forecasting model.
 
-# First we need to export a SEED that controls the randomness of the training
+## Seed
+
+First we need to export a SEED that controls the randomness of the training
+
+```bash
 export ANEMOI_BASE_SEED=42
+```
 
-# Now we start training
+## Training 
+
+Now we start training
+```bash
 anemoi-training train --config-name=deterministic_minimal.yaml
+```
 
-# Open a new tab and start the mlflow local server
+## Logging
+
+Open a new terminal tab and start the mlflow local server
+```
 mlflow ui --backend-store-uri=/home/$USER/anemoi-output/logs/mlflow/ --port=5111
+```
 
-# Open a new tab and go to
-# https://traininglab02.ecmwf.europeanweather.cloud/user/[USER_ID_GOES_HERE]/proxy/5111/
+Open a new tab and go to
+
+```
+https://traininglab02.ecmwf.europeanweather.cloud/user/[USER_ID_GOES_HERE]/proxy/5111/
+```
