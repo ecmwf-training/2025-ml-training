@@ -8,7 +8,7 @@ export ANEMOI_BASE_SEED=42
 anemoi-training train --config-name=deterministic_minimal.yaml
 
 # Open a new tab and start the mlflow local server
-mlflow ui --backend-store-uri=/home/student/anemoi-output/logs/mlflow/ --port=5111
+mlflow ui --backend-store-uri=/home/$USER/anemoi-output/logs/mlflow/ --port=5111
 
 # Open a new tab and go to
-# https://traininglab02.ecmwf.europeanweather.cloud/user/student/proxy/5111/
+# https://traininglab02.ecmwf.europeanweather.cloud/user/[USER_ID_GOES_HERE]/proxy/5111/
