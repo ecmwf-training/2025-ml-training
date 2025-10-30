@@ -47,7 +47,7 @@ log:
     offline: True
     authentication: False
     tracking_uri: null
-    experiment_name: 'anemoi-training'
+    experiment_name: ${oc.env:USER}-training
     project_name: 'Anemoi'
     system: False
     terminal: True
