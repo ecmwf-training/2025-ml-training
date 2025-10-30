@@ -7,9 +7,12 @@ import logging
 
 LOGGER = logging.getLogger(__name__)
 
-
+def fix(lons):
+    # Shift the longitudes from 0-360 to -180-180
+    return np.where(lons > 180, lons - 360, lons)
+    
 def plot_sensitivities(
-    state: dict, field: str, savefig: bool = False, area: tuple[float, float, float, float] = None
+    state: dict, field: str, savefig: bool = False, area: tuple[float, float, float, float] = None, size: float | None = None,
 ) -> None:
     """Plot sensitivities on a map for a given field."""
     num_times = state["fields"][field].shape[0]
@@ -31,10 +34,10 @@ def plot_sensitivities(
             ax.set_extent(area, crs=ccrs.PlateCarree())
 
         sensitivities = state["fields"][field][i]
-        scatter = ax.scatter(
-            state["longitudes"],
+        scatter = ax.tricontourf(
+            fix(state["longitudes"]),
             state["latitudes"],
-            c=sensitivities,
+            sensitivities,
             cmap="PuOr",
             vmin=-lim,
             vmax=lim,

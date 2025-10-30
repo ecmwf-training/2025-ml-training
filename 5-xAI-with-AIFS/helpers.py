@@ -31,6 +31,14 @@ def load_saved_state(file) -> dict:
     state = {"date": date, "fields": fields}
     return state
 
+def load_state(state, outfile):
+    with np.load(file, allow_pickle=False) as data:
+        fields = {k: data[k] for k in data.files}
+
+    state = {"date": date, "fields": fields, "latitudes": fields.pop("latitudes"), "longitudes": fields.pop("longitudes")}
+
+def save_state(state, outfile):
+    np.savez(outfile, **state["fields"], longitudes = state["longitudes"], latitudes = state["latitudes"])
 
 def get_open_data(param, date, resolution: str, levelist=[]) -> dict:
     fields = defaultdict(list)
