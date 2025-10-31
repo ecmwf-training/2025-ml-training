@@ -1,5 +1,6 @@
 import datetime
 import logging
+import subprocess
 from collections import defaultdict
 from pathlib import Path
 
@@ -22,9 +23,9 @@ SOIL_LEVELS = [1, 2]
 
 def load_ckpt(grid_resolution: str) -> str:
     assert grid_resolution in ["O96"], "Grid resolution must be O96"
-    url = f"https://object-store.os-api.cci1.ecmwf.int/ml-tests/test-data/samples/training-course/inference-aifs-{grid_resolution}.ckpt"
+    url = f"https://object-store.os-api.cci1.ecmwf.int/ml-tests/test-data/samples/training-course/inference-aifs-{grid_resolution.lower()}.ckpt"
 
-    ckpt_file = Path("checkpoints") / f"aifs-global-{grid_resolution}.ckpt"
+    ckpt_file = Path("checkpoints") / f"aifs-global-{grid_resolution.lower()}.ckpt"
 
     # Create the output directory
     ckpt_file.parent.mkdir(parents=True, exist_ok=True)

@@ -7,12 +7,13 @@ import logging
 
 LOGGER = logging.getLogger(__name__)
 
-def fix(lons):
-    # Shift the longitudes from 0-360 to -180-180
-    return np.where(lons > 180, lons - 360, lons)
-    
+
 def plot_sensitivities(
-    state: dict, field: str, savefig: bool = False, area: tuple[float, float, float, float] = None, size: float | None = None,
+    state: dict,
+    field: str,
+    savefig: bool = False,
+    use_tricountour: bool = False,
+    area: tuple[float, float, float, float] | None = None,
 ) -> None:
     """Plot sensitivities on a map for a given field."""
     num_times = state["fields"][field].shape[0]
@@ -34,15 +35,27 @@ def plot_sensitivities(
             ax.set_extent(area, crs=ccrs.PlateCarree())
 
         sensitivities = state["fields"][field][i]
-        scatter = ax.tricontourf(
-            fix(state["longitudes"]),
-            state["latitudes"],
-            sensitivities,
-            cmap="PuOr",
-            vmin=-lim,
-            vmax=lim,
-            transform=ccrs.PlateCarree(),
-        )
+        if use_tricountour:
+            scatter = ax.tricontourf(
+                np.where(state["longitudes"] > 180, state["longitudes"] - 360, state["longitudes"]),
+                state["latitudes"],
+                sensitivities,
+                levels=20,
+                cmap="PuOr",
+                vmin=-lim,
+                vmax=lim,
+                transform=ccrs.PlateCarree(),
+            )
+        else:
+            scatter = ax.scatter(
+                state["longitudes"],
+                state["latitudes"],
+                c=sensitivities,
+                cmap="PuOr",
+                vmin=-lim,
+                vmax=lim,
+                transform=ccrs.PlateCarree(),
+            )
         scatter_plots.append(scatter)
 
     # Use the first scatter plot for the colorbar to ensure colormap consistency
